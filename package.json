@@ -1,0 +1,118 @@
+{
+  "name": "git-history-sidebar",
+  "displayName": "Git History Sidebar",
+  "description": "View git history for current file in sidebar",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.108.0"
+  },
+  "categories": [
+    "Other",
+    "SCM Providers"
+  ],
+  "keywords": [
+    "git",
+    "history",
+    "sidebar",
+    "diff"
+  ],
+  "activationEvents": [
+    "onView:gitHistoryView"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gitHistory",
+          "title": "Git History",
+          "icon": "images/git-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "gitHistory": [
+        {
+          "id": "gitHistoryView",
+          "name": "File History",
+          "icon": "images/git-icon.svg",
+          "contextualTitle": "Git History"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "gitHistory.refresh",
+        "title": "Refresh",
+        "icon": {
+          "light": "images/refresh.svg",
+          "dark": "images/refresh.svg"
+        }
+      },
+      {
+        "command": "gitHistory.viewDiff",
+        "title": "View Diff"
+      },
+      {
+        "command": "gitHistory.loadMore",
+        "title": "Load More Commits"
+      },
+      {
+        "command": "gitHistory.viewCommitFiles",
+        "title": "View Changed Files",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "gitHistory.copyCommitSha",
+        "title": "Copy Commit SHA",
+        "icon": "$(clippy)"
+      },
+      {
+        "command": "gitHistory.backToHistory",
+        "title": "Back to History"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "gitHistory.refresh",
+          "when": "view == gitHistoryView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "gitHistory.viewCommitFiles",
+          "when": "view == gitHistoryView && viewItem == commit",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitHistory.copyCommitSha",
+          "when": "view == gitHistoryView && viewItem == commit",
+          "group": "inline@2"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "dependencies": {
+    "simple-git": "^3.30.0"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.109.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.39.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0"
+  }
+}
