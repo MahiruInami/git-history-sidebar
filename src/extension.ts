@@ -66,7 +66,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
       
       try {
-        const parentHash = await gitService.getParentCommit(commitHash);
+        const parentHash = await gitService.getParentCommit(commitHash, filePath);
 
         if (!parentHash) {
           vscode.window.showInformationMessage('This is the first commit');

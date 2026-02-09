@@ -7,6 +7,10 @@
     "vscode": "^1.105.0"
   },
   "publisher": "MahiruInami",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MahiruInami/git-history-sidebar"
+  },
   "categories": [
     "Other",
     "SCM Providers"

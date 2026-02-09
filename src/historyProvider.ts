@@ -180,7 +180,7 @@ export class GitHistoryProvider implements vscode.TreeDataProvider<vscode.TreeIt
     }
 
     console.log('Building new tree');
-    const files = await this.gitService.getChangedFiles(commitHash);
+    const files = await this.gitService.getChangedFiles(commitHash, this.currentFilePath);
     const tree = this.buildFileTree(files, commitHash);
     this.commitFiles.set(commitHash, tree);
     
@@ -205,8 +205,11 @@ export class GitHistoryProvider implements vscode.TreeDataProvider<vscode.TreeIt
       return;
     }
     
-    // Get relative path of current file
-    const relativePath = this.gitService.getRelativePath(this.currentFilePath);
+    // Get relative path of current file from the appropriate repo
+    const repo = this.gitService['getRepoForFile'](this.currentFilePath);
+    const relativePath = repo 
+      ? this.gitService['getRelativePathForRepo'](this.currentFilePath, repo.root)
+      : this.currentFilePath;
     
     // Find which file in the tree matches the current file
     let currentFile: FileItem | undefined;

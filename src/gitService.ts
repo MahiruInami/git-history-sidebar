@@ -1,4 +1,6 @@
 import { simpleGit, SimpleGit } from 'simple-git';
+import * as path from 'path';
+import * as fs from 'fs';
 import { CacheManager } from './cacheManager';
 
 export interface CommitInfo {
@@ -9,34 +11,111 @@ export interface CommitInfo {
   authorEmail: string;
 }
 
+interface GitRepoInfo {
+  root: string;
+  git: SimpleGit;
+}
+
 export class GitService {
-  private git: SimpleGit;
+  private mainGit: SimpleGit;
   private cache: CacheManager;
   private isGitRepo: boolean = false;
   private initializationPromise: Promise<void>;
+  private submoduleRepos: Map<string, GitRepoInfo> = new Map();
 
   constructor(private workspaceRoot: string) {
-    this.git = simpleGit(workspaceRoot);
+    this.mainGit = simpleGit(workspaceRoot);
     this.cache = new CacheManager();
-    this.initializationPromise = this.checkGitRepo();
+    this.initializationPromise = this.initializeRepos();
   }
 
-  private async checkGitRepo(): Promise<void> {
+  private async initializeRepos(): Promise<void> {
     try {
-      this.isGitRepo = await this.git.checkIsRepo();
+      this.isGitRepo = await this.mainGit.checkIsRepo();
+      if (this.isGitRepo) {
+        await this.detectSubmodules();
+      }
     } catch {
       this.isGitRepo = false;
     }
   }
 
+  private async detectSubmodules(): Promise<void> {
+    try {
+      // Get list of submodules
+      const result = await this.mainGit.subModule(['status']);
+      const lines = result.split('\n').filter(line => line.trim());
+      
+      for (const line of lines) {
+        // Parse submodule status line: [+- ]<commit> <path> (<branch>)
+        const match = line.match(/^\s*[+-\s]?([a-f0-9]+)\s+(\S+)/);
+        if (match) {
+          const submodulePath = match[2];
+          const fullPath = path.join(this.workspaceRoot, submodulePath);
+          
+          // Check if this is actually a git repo
+          const submoduleGit = simpleGit(fullPath);
+          const isRepo = await submoduleGit.checkIsRepo();
+          
+          if (isRepo) {
+            this.submoduleRepos.set(submodulePath, {
+              root: fullPath,
+              git: submoduleGit
+            });
+            console.log('Detected submodule:', submodulePath);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('No submodules detected or error:', error);
+    }
+  }
+
+  private getRepoForFile(filePath: string): GitRepoInfo | null {
+    const normalizedFile = path.normalize(filePath);
+    
+    // Check if file is in a submodule
+    for (const [submodulePath, repoInfo] of this.submoduleRepos.entries()) {
+      const fullSubmodulePath = path.join(this.workspaceRoot, submodulePath);
+      if (normalizedFile.startsWith(path.normalize(fullSubmodulePath))) {
+        return repoInfo;
+      }
+    }
+    
+    // Return main repo
+    if (this.isGitRepo) {
+      return { root: this.workspaceRoot, git: this.mainGit };
+    }
+    
+    return null;
+  }
+
+  private getRelativePathForRepo(filePath: string, repoRoot: string): string {
+    const normalizedFile = path.normalize(filePath);
+    const normalizedRepo = path.normalize(repoRoot);
+    
+    if (normalizedFile.startsWith(normalizedRepo)) {
+      let relativePath = normalizedFile.slice(normalizedRepo.length);
+      // Remove leading path separator
+      if (relativePath.startsWith(path.sep)) {
+        relativePath = relativePath.slice(1);
+      }
+      return relativePath.replace(/\\/g, '/');
+    }
+    
+    return filePath.replace(/\\/g, '/');
+  }
+
   async isValidRepo(): Promise<boolean> {
     await this.initializationPromise;
-    return this.isGitRepo;
+    return this.isGitRepo || this.submoduleRepos.size > 0;
   }
 
   async getLog(filePath: string, page: number = 0): Promise<CommitInfo[]> {
     await this.initializationPromise;
-    if (!this.isGitRepo) {
+    
+    const repo = this.getRepoForFile(filePath);
+    if (!repo) {
       return [];
     }
 
@@ -47,8 +126,9 @@ export class GitService {
     }
 
     try {
-      const result = await this.git.log({
-        file: filePath,
+      const relativePath = this.getRelativePathForRepo(filePath, repo.root);
+      const result = await repo.git.log({
+        file: relativePath,
         '--follow': null,
         '--max-count': 50,
         '--skip': page * 50,
@@ -61,12 +141,12 @@ export class GitService {
         }
       });
 
-      const commits = result.all.map(log => ({
+      const commits = result.all.map((log: any) => ({
         hash: log.hash,
         date: log.date,
         message: log.message,
-        author: (log as any).author_name || log.author,
-        authorEmail: (log as any).author_email || (log as any).authorEmail
+        author: log.author_name || log.author,
+        authorEmail: log.author_email || log.authorEmail
       }));
 
       this.cache.set(cacheKey, commits, { filePath });
@@ -77,19 +157,29 @@ export class GitService {
     }
   }
 
-  async getChangedFiles(commitHash: string): Promise<{path: string; status: 'added' | 'modified' | 'deleted' | 'unchanged'}[]> {
+  async getChangedFiles(commitHash: string, filePath?: string): Promise<{path: string; status: 'added' | 'modified' | 'deleted' | 'unchanged'}[]> {
     const cacheKey = `files:${commitHash}`;
     const cached = this.cache.get<{path: string; status: 'added' | 'modified' | 'deleted' | 'unchanged'}[]>(cacheKey);
     if (cached) {
       return cached;
     }
 
+    // Determine which repo to use
+    let git: SimpleGit;
+    if (filePath) {
+      const repo = this.getRepoForFile(filePath);
+      if (!repo) return [];
+      git = repo.git;
+    } else {
+      git = this.mainGit;
+    }
+
     try {
       // Get file names and their status
       // Note: Options must come before commit hash
-      const result = await this.git.show(['--name-status', '--pretty=format:', commitHash]);
+      const result = await git.show(['--name-status', '--pretty=format:', commitHash]);
       console.log('Git show result:', result);
-      const lines = result.split('\n').filter(f => f.trim());
+      const lines = result.split('\n').filter((line: string) => line.trim());
       
       const files: {path: string; status: 'added' | 'modified' | 'deleted' | 'unchanged'}[] = [];
       
@@ -128,9 +218,17 @@ export class GitService {
     }
   }
 
-  async getParentCommit(commitHash: string): Promise<string | null> {
+  async getParentCommit(commitHash: string, filePath?: string): Promise<string | null> {
     try {
-      return await this.git.revparse([`${commitHash}^`]);
+      let git: SimpleGit;
+      if (filePath) {
+        const repo = this.getRepoForFile(filePath);
+        if (!repo) return null;
+        git = repo.git;
+      } else {
+        git = this.mainGit;
+      }
+      return await git.revparse([`${commitHash}^`]);
     } catch {
       return null;
     }
@@ -143,35 +241,22 @@ export class GitService {
       return cached;
     }
 
+    const repo = this.getRepoForFile(filePath);
+    if (!repo) {
+      return '';
+    }
+
     try {
-      // Convert absolute path to relative path from workspace root
-      const relativePath = this.getRelativePath(filePath);
+      // Convert absolute path to relative path from repo root
+      const relativePath = this.getRelativePathForRepo(filePath, repo.root);
       console.log('Getting file content for:', relativePath, 'from commit:', commitHash);
-      const content = await this.git.show([`${commitHash}:${relativePath}`]);
+      const content = await repo.git.show([`${commitHash}:${relativePath}`]);
       this.cache.set(cacheKey, content, { filePath, commitHash });
       return content;
     } catch (error) {
       console.error('Error fetching file content:', error);
       return '';
     }
-  }
-
-  getRelativePath(absolutePath: string): string {
-    // Normalize paths for cross-platform compatibility
-    const normalizedWorkspace = this.workspaceRoot.replace(/\\/g, '/');
-    const normalizedPath = absolutePath.replace(/\\/g, '/');
-    
-    if (normalizedPath.startsWith(normalizedWorkspace)) {
-      let relativePath = normalizedPath.slice(normalizedWorkspace.length);
-      // Remove leading slash if present
-      if (relativePath.startsWith('/')) {
-        relativePath = relativePath.slice(1);
-      }
-      return relativePath;
-    }
-    
-    // If it's already a relative path, return as-is
-    return absolutePath.replace(/\\/g, '/');
   }
 
   invalidateCache(filePath?: string): void {
