@@ -201,7 +201,9 @@ export class GitHistoryProvider implements vscode.TreeDataProvider<vscode.TreeIt
   }
 
   private expandFoldersToCurrentFile(tree: Map<string, vscode.TreeItem[]>, commitHash: string): void {
-    if (!this.currentFilePath) return;
+    if (!this.currentFilePath) {
+      return;
+    }
     
     // Get relative path of current file
     const relativePath = this.gitService.getRelativePath(this.currentFilePath);
@@ -215,10 +217,14 @@ export class GitHistoryProvider implements vscode.TreeDataProvider<vscode.TreeIt
           break;
         }
       }
-      if (currentFile) break;
+      if (currentFile) {
+        break;
+      }
     }
     
-    if (!currentFile) return;
+    if (!currentFile) {
+      return;
+    }
     
     // Expand all parent folders
     const parts = relativePath.split(/[\\/]/);
@@ -294,8 +300,12 @@ export class GitHistoryProvider implements vscode.TreeDataProvider<vscode.TreeIt
         const aIsFolder = a instanceof FolderItem;
         const bIsFolder = b instanceof FolderItem;
         
-        if (aIsFolder && !bIsFolder) return -1;
-        if (!aIsFolder && bIsFolder) return 1;
+        if (aIsFolder && !bIsFolder) {
+          return -1;
+        }
+        if (!aIsFolder && bIsFolder) {
+          return 1;
+        }
         
         return a.label!.toString().localeCompare(b.label!.toString());
       });
