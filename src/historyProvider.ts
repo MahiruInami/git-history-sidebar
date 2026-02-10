@@ -63,6 +63,8 @@ export class GitHistoryProvider implements vscode.TreeDataProvider<vscode.TreeIt
 
   setFocusedCommit(commitHash: string): void {
     this.focusedCommitHash = commitHash;
+    this.allFoldersExpanded = true;
+    this.manualFoldState = 'unfolded';
     this.refresh();
   }
 

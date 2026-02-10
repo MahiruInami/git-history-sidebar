@@ -4,51 +4,43 @@
   viewBox="0 0 128 128"
   xmlns="http://www.w3.org/2000/svg"
 >
-  <!-- Git branch line -->
+  <!-- Vertical history line segments -->
+  <line x1="40" y1="24" x2="40" y2="52"
+        stroke="#F05033" stroke-width="10" stroke-linecap="round"/>
+  <line x1="40" y1="76" x2="40" y2="104"
+        stroke="#F05033" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- Branch line -->
+  <line x1="40" y1="64" x2="88" y2="64"
+        stroke="#F05033" stroke-width="10" stroke-linecap="round"/>
+  <line x1="88" y1="64" x2="88" y2="88"
+        stroke="#F05033" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- Commit nodes (drawn last, on top) -->
+  <circle cx="40" cy="16" r="10"
+          fill="white" stroke="#F05033" stroke-width="6"/>
+  <circle cx="40" cy="64" r="10"
+          fill="white" stroke="#F05033" stroke-width="6"/>
+  <circle cx="40" cy="112" r="10"
+          fill="white" stroke="#F05033" stroke-width="6"/>
+
+  <circle cx="88" cy="96" r="10"
+          fill="white" stroke="#F05033" stroke-width="6"/>
+
+  <!-- History arrow -->
   <path
-    d="M64 28
-       V56
-       C64 66 44 66 44 76
-       V100"
+    d="M104 32 V72"
     fill="none"
-    stroke="#F05033"
-    stroke-width="6"
+    stroke="#6A9955"
+    stroke-width="8"
+    stroke-linecap="round"
+  />
+  <path
+    d="M96 64 L104 80 L112 64"
+    fill="none"
+    stroke="#6A9955"
+    stroke-width="8"
     stroke-linecap="round"
     stroke-linejoin="round"
-  />
-
-  <!-- Commit nodes -->
-  <circle cx="64" cy="28" r="6" fill="#F05033"/>
-  <circle cx="64" cy="56" r="6" fill="#F05033"/>
-  <circle cx="44" cy="76" r="6" fill="#F05033"/>
-  <circle cx="44" cy="100" r="6" fill="#F05033"/>
-
-  <!-- History / timeline lines -->
-  <line
-    x1="78"
-    y1="42"
-    x2="98"
-    y2="42"
-    stroke="#6A9955"
-    stroke-width="4"
-    stroke-linecap="round"
-  />
-  <line
-    x1="78"
-    y1="62"
-    x2="102"
-    y2="62"
-    stroke="#6A9955"
-    stroke-width="4"
-    stroke-linecap="round"
-  />
-  <line
-    x1="78"
-    y1="82"
-    x2="94"
-    y2="82"
-    stroke="#6A9955"
-    stroke-width="4"
-    stroke-linecap="round"
   />
 </svg>

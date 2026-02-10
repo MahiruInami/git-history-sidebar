@@ -7,6 +7,7 @@ A VSCode extension that displays git commit history for the current file in a de
 - **Commit History Sidebar**: View all commits that modified the current file directly in a sidebar panel
 - **Quick Diff View**: Click any commit to see what changed in that file for that specific commit
 - **Changed Files Browser**: View all files modified in a commit with folder tree structure
+- **File Status Indicators**: Visual indicators showing if files were added (green), modified (blue), or deleted (red)
 - **Current File Highlighting**: Automatically highlights and expands to the current file in the changed files view
 - **One-Click Actions**:
   - Copy commit SHA to clipboard
@@ -41,7 +42,7 @@ This extension currently does not add any VS Code settings.
 
 ## Release Notes
 
-### 1.0.0
+### 0.0.2
 
 Initial release with core features:
 
