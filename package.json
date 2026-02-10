@@ -2,7 +2,7 @@
   "name": "git-history-sidebar",
   "displayName": "Git History Sidebar",
   "description": "View git history for current file in sidebar",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.105.0"
   },
