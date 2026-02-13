@@ -11,6 +11,14 @@ export interface CommitInfo {
   authorEmail: string;
 }
 
+export interface BlameLineInfo {
+  lineNumber: number;
+  commitHash: string;
+  author: string;
+  date: string;
+  summary: string;
+}
+
 interface GitRepoInfo {
   root: string;
   git: SimpleGit;
@@ -261,5 +269,92 @@ export class GitService {
 
   invalidateCache(filePath?: string): void {
     this.cache.invalidate(filePath);
+  }
+
+  async getBlame(filePath: string): Promise<BlameLineInfo[]> {
+    await this.initializationPromise;
+    
+    const repo = this.getRepoForFile(filePath);
+    if (!repo) {
+      return [];
+    }
+
+    const cacheKey = `blame:${filePath}`;
+    const cached = this.cache.get<BlameLineInfo[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const relativePath = this.getRelativePathForRepo(filePath, repo.root);
+      const result = await repo.git.raw(['blame', '--porcelain', relativePath]);
+      
+      const blameInfo = this.parseBlameOutput(result);
+      this.cache.set(cacheKey, blameInfo, { filePath });
+      return blameInfo;
+    } catch (error) {
+      console.error('Error fetching git blame:', error);
+      return [];
+    }
+  }
+
+  private parseBlameOutput(output: string): BlameLineInfo[] {
+    const lines = output.split('\n');
+    const blameInfo: BlameLineInfo[] = [];
+    const commitCache: Map<string, Partial<BlameLineInfo>> = new Map();
+    let currentCommitHash: string = '';
+
+    for (const line of lines) {
+      if (line.match(/^[a-f0-9]{40} \d+ \d+/)) {
+        // New line entry: hash original-line line-number
+        const parts = line.split(' ');
+        currentCommitHash = parts[0];
+        const lineNumber = parseInt(parts[2], 10);
+        
+        // Get cached commit info or create new
+        let commitInfo = commitCache.get(currentCommitHash);
+        if (!commitInfo) {
+          commitInfo = { commitHash: currentCommitHash };
+          commitCache.set(currentCommitHash, commitInfo);
+        }
+        
+        // Push the line with current commit info
+        blameInfo.push({
+          lineNumber: lineNumber,
+          commitHash: currentCommitHash,
+          author: commitInfo.author || 'Unknown',
+          date: commitInfo.date || new Date().toISOString(),
+          summary: commitInfo.summary || ''
+        });
+      } else if (line.startsWith('author ')) {
+        const author = line.substring(7);
+        if (currentCommitHash) {
+          const commitInfo = commitCache.get(currentCommitHash);
+          if (commitInfo) {
+            commitInfo.author = author;
+          }
+        }
+      } else if (line.startsWith('author-time ')) {
+        const timestamp = parseInt(line.substring(12), 10);
+        if (currentCommitHash) {
+          const commitInfo = commitCache.get(currentCommitHash);
+          if (commitInfo) {
+            commitInfo.date = new Date(timestamp * 1000).toISOString();
+          }
+        }
+      } else if (line.startsWith('summary ')) {
+        const summary = line.substring(8);
+        if (currentCommitHash) {
+          const commitInfo = commitCache.get(currentCommitHash);
+          if (commitInfo) {
+            commitInfo.summary = summary;
+          }
+        }
+      }
+    }
+
+    // Sort by line number
+    blameInfo.sort((a, b) => a.lineNumber - b.lineNumber);
+    return blameInfo;
   }
 }

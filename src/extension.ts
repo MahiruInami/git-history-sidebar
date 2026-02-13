@@ -4,9 +4,11 @@ import { GitService } from './gitService';
 import { GitHistoryProvider } from './historyProvider';
 import { GitHistoryContentProvider } from './contentProvider';
 import { GitWatcher } from './gitWatcher';
+import { GitBlameProvider } from './blameProvider';
 
 let gitService: GitService | undefined;
 let historyProvider: GitHistoryProvider | undefined;
+let blameProvider: GitBlameProvider | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Git History Sidebar extension is now active!');
@@ -32,6 +34,12 @@ export function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(
           vscode.workspace.registerTextDocumentContentProvider('git-history', contentProvider)
         );
+
+        // Initialize blame provider
+        console.log('[GitHistory] Initializing blame provider...');
+        blameProvider = new GitBlameProvider(gitService!);
+        context.subscriptions.push({ dispose: () => blameProvider?.dispose() });
+        console.log('[GitHistory] Blame provider initialized');
 
         const gitWatcher = new GitWatcher(workspaceRoot, () => {
           gitService?.invalidateCache();
@@ -137,6 +145,18 @@ export function activate(context: vscode.ExtensionContext) {
       // Copy to clipboard
       await vscode.env.clipboard.writeText(commitHash);
       vscode.window.showInformationMessage(`Copied commit SHA: ${commitHash.substring(0, 7)}`);
+    }),
+
+    vscode.commands.registerCommand('gitHistory.toggleBlame', async () => {
+      console.log('[GitHistory] Toggle command triggered');
+      if (blameProvider) {
+        console.log('[GitHistory] Blame provider exists, calling toggle');
+        await blameProvider.toggle();
+        console.log('[GitHistory] Toggle completed');
+      } else {
+        console.log('[GitHistory] Blame provider not initialized');
+        vscode.window.showWarningMessage('Git History: Blame provider not initialized');
+      }
     }),
 
   );

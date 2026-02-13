@@ -22,7 +22,8 @@
     "diff"
   ],
   "activationEvents": [
-    "onView:gitHistoryView"
+    "onView:gitHistoryView",
+    "onCommand:gitHistory.toggleBlame"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -75,14 +76,39 @@
       {
         "command": "gitHistory.backToHistory",
         "title": "Back to History"
+      },
+      {
+        "command": "gitHistory.toggleBlame",
+        "title": "Toggle Git Blame Annotations",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "gitHistory.viewBlameCommit",
+        "title": "View Commit Files from Blame"
       }
     ],
+    "configuration": {
+      "title": "Git History",
+      "properties": {
+        "gitHistory.showBlame": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show git blame annotations in the editor gutter"
+        }
+      }
+    },
     "menus": {
       "view/title": [
         {
           "command": "gitHistory.refresh",
           "when": "view == gitHistoryView",
           "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "gitHistory.toggleBlame",
+          "group": "9_cutcopypaste@5"
         }
       ],
       "view/item/context": [
