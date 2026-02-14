@@ -14,7 +14,7 @@ export class GitBlameProvider {
       rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
       before: {
         color: new vscode.ThemeColor('gitDecoration.modifiedResourceForeground'),
-        fontStyle: 'italic',
+        fontStyle: 'normal',
         fontWeight: 'normal',
         margin: '0 15px 0 0'
       }
@@ -149,6 +149,11 @@ export class GitBlameProvider {
       const textDecorations: vscode.DecorationOptions[] = [];
       const hoverDecorations: vscode.DecorationOptions[] = [];
 
+      // Fixed widths for consistent alignment
+      const dateWidth = 10; // DD/MM/YYYY
+      const authorWidth = 12;
+      const totalWidth = dateWidth + 1 + authorWidth; // date + space + author
+      
       for (const lineInfo of blameInfo) {
         const lineIndex = lineInfo.lineNumber - 1;
         if (lineIndex < 0 || lineIndex >= editor.document.lineCount) {
@@ -157,8 +162,10 @@ export class GitBlameProvider {
 
         const line = editor.document.lineAt(lineIndex);
         const relativeTime = this.formatRelativeTime(lineInfo.date);
-        const author = this.truncateAuthor(lineInfo.author, 12);
-        const text = `${author} (${relativeTime})`;
+        const author = this.truncateAuthor(lineInfo.author, authorWidth);
+        const annotationText = `${relativeTime}\u00A0${author}`;
+        // Ensure the entire annotation has a fixed width
+        const text = annotationText + '\u00A0'.repeat(totalWidth - annotationText.length);
 
         // Create hover message
         const hoverMessage = new vscode.MarkdownString();
@@ -210,13 +217,16 @@ export class GitBlameProvider {
 
   private truncateAuthor(author: string, maxLength: number): string {
     if (author.length <= maxLength) {
-      return author;
+      return author + '\u00A0'.repeat(maxLength - author.length);
     }
     return author.substring(0, maxLength - 2) + '..';
   }
 
   private formatRelativeTime(dateStr: string): string {
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      return '\u00A0\u00A0-\u00A0/\u00A0-\u00A0/\u00A0\u00A0';
+    }
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
