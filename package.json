@@ -2,7 +2,7 @@
   "name": "git-history-sidebar",
   "displayName": "Git History Sidebar",
   "description": "View git history for current file in sidebar",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "engines": {
     "vscode": "^1.105.0"
   },
@@ -20,10 +20,6 @@
     "history",
     "sidebar",
     "diff"
-  ],
-  "activationEvents": [
-    "onView:gitHistoryView",
-    "onCommand:gitHistory.toggleBlame"
   ],
   "main": "./out/extension.js",
   "contributes": {
