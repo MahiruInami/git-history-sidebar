@@ -94,6 +94,16 @@
           "type": "boolean",
           "default": true,
           "description": "Show git blame annotations in the editor gutter"
+        },
+        "gitHistory.blameFontSize": {
+          "type": "number",
+          "default": 12,
+          "description": "Font size for blame annotations"
+        },
+        "gitHistory.blameFontFamily": {
+          "type": "string",
+          "default": "Menlo, Monaco, 'Courier New', monospace",
+          "description": "Font family for blame annotations"
         }
       }
     },

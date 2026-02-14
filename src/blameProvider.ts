@@ -7,18 +7,15 @@ export class GitBlameProvider {
   private enabled: boolean = true;
   private currentEditor: vscode.TextEditor | undefined;
   private blameData: Map<string, BlameLineInfo[]> = new Map();
+  private fontSize: number;
+  private fontFamily: string;
 
   constructor(private gitService: GitService) {
-    // Decoration type for the visible text (no hover)
-    this.textDecorationType = vscode.window.createTextEditorDecorationType({
-      rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
-      before: {
-        color: new vscode.ThemeColor('gitDecoration.modifiedResourceForeground'),
-        fontStyle: 'normal',
-        fontWeight: 'normal',
-        margin: '0 15px 0 0'
-      }
-    });
+    const config = vscode.workspace.getConfiguration('gitHistory');
+    this.fontSize = config.get('blameFontSize', 12);
+    this.fontFamily = config.get('blameFontFamily', 'Menlo, Monaco, \'Courier New\', monospace');
+
+    this.textDecorationType = this.createTextDecorationType();
 
     // Decoration type for hover area (invisible, narrow range)
     this.hoverDecorationType = vscode.window.createTextEditorDecorationType({
@@ -30,6 +27,9 @@ export class GitBlameProvider {
     vscode.workspace.onDidChangeConfiguration(e => {
       if (e.affectsConfiguration('gitHistory.showBlame')) {
         this.updateEnabledState();
+      }
+      if (e.affectsConfiguration('gitHistory.blameFontSize') || e.affectsConfiguration('gitHistory.blameFontFamily')) {
+        this.updateFontSettings();
       }
     });
 
@@ -169,17 +169,21 @@ export class GitBlameProvider {
 
         // Create hover message
         const hoverMessage = new vscode.MarkdownString();
-        hoverMessage.appendMarkdown(`**${lineInfo.author}**  \n`);
-        hoverMessage.appendMarkdown(`${lineInfo.summary}  \n`);
-        hoverMessage.appendMarkdown(`\`\`\`\n${lineInfo.commitHash.substring(0, 7)}\n\`\`\`  \n\n`);
-        hoverMessage.appendMarkdown(`[View Changed Files](command:gitHistory.viewBlameCommit?${encodeURIComponent(JSON.stringify([lineInfo.commitHash, filePath]))})`);
-        hoverMessage.appendMarkdown(` | [Copy SHA](command:gitHistory.copyCommitShaFromBlame?${encodeURIComponent(JSON.stringify([lineInfo.commitHash]))})`);
+        hoverMessage.appendMarkdown(`**Commit:** [${lineInfo.commitHash.substring(0, 7)}](command:gitHistory.viewBlameCommit?${encodeURIComponent(JSON.stringify([lineInfo.commitHash, filePath]))})  \n`);
+        hoverMessage.appendMarkdown(`**Author:** ${lineInfo.author}${lineInfo.authorEmail ? ` ${lineInfo.authorEmail}` : ''}  \n`);
+        const date = new Date(lineInfo.date);
+        hoverMessage.appendMarkdown(`**Date:** ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}  \n`);
         
         // Add GitHub link if available
         if (githubUrl) {
           const commitUrl = `${githubUrl}/commit/${lineInfo.commitHash}`;
-          hoverMessage.appendMarkdown(`  \n[View on GitHub](${commitUrl})`);
+          hoverMessage.appendMarkdown(`[Copy sha](command:gitHistory.copyCommitShaFromBlame?${encodeURIComponent(JSON.stringify([lineInfo.commitHash]))}) &nbsp; | &nbsp; [View on GitHub](${commitUrl})  \n`);
+        } else {
+          hoverMessage.appendMarkdown(`[Copy sha](command:gitHistory.copyCommitShaFromBlame?${encodeURIComponent(JSON.stringify([lineInfo.commitHash]))})  \n`);
         }
+        
+        hoverMessage.appendMarkdown(`\n`);
+        hoverMessage.appendMarkdown(`${lineInfo.summary}  \n`);
         
         hoverMessage.isTrusted = true;
 
@@ -236,5 +240,41 @@ export class GitBlameProvider {
   dispose(): void {
     this.textDecorationType.dispose();
     this.hoverDecorationType.dispose();
+  }
+
+  private createTextDecorationType(): vscode.TextEditorDecorationType {
+    const beforeOptions: any = {
+      color: '#acacac',
+      fontStyle: 'normal',
+      fontWeight: 'normal',
+      margin: '0 15px 0 0'
+    };
+    
+    if (this.fontSize) {
+      beforeOptions.fontSize = `${this.fontSize}px`;
+    }
+    if (this.fontFamily) {
+      beforeOptions.fontFamily = this.fontFamily;
+    }
+    
+    const options: vscode.DecorationRenderOptions = {
+      rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
+      before: beforeOptions
+    };
+    
+    return vscode.window.createTextEditorDecorationType(options);
+  }
+
+  private updateFontSettings(): void {
+    const config = vscode.workspace.getConfiguration('gitHistory');
+    this.fontSize = config.get('blameFontSize', 12);
+    this.fontFamily = config.get('blameFontFamily', 'Menlo, Monaco, \'Courier New\', monospace');
+    
+    this.textDecorationType.dispose();
+    this.textDecorationType = this.createTextDecorationType();
+    
+    if (this.currentEditor && this.enabled) {
+      this.showBlame(this.currentEditor);
+    }
   }
 }

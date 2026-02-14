@@ -15,6 +15,7 @@ export interface BlameLineInfo {
   lineNumber: number;
   commitHash: string;
   author: string;
+  authorEmail: string;
   date: string;
   summary: string;
 }
@@ -176,7 +177,9 @@ export class GitService {
     let git: SimpleGit;
     if (filePath) {
       const repo = this.getRepoForFile(filePath);
-      if (!repo) return [];
+      if (!repo) {
+        return [];
+      }
       git = repo.git;
     } else {
       git = this.mainGit;
@@ -231,7 +234,9 @@ export class GitService {
       let git: SimpleGit;
       if (filePath) {
         const repo = this.getRepoForFile(filePath);
-        if (!repo) return null;
+        if (!repo) {
+          return null;
+        }
         git = repo.git;
       } else {
         git = this.mainGit;
@@ -276,7 +281,9 @@ export class GitService {
       let git: SimpleGit;
       if (filePath) {
         const repo = this.getRepoForFile(filePath);
-        if (!repo) return null;
+        if (!repo) {
+          return null;
+        }
         git = repo.git;
       } else {
         git = this.mainGit;
@@ -362,6 +369,7 @@ export class GitService {
           lineNumber: lineNumber,
           commitHash: currentCommitHash,
           author: commitInfo.author || 'Unknown',
+          authorEmail: commitInfo.authorEmail || '',
           date: commitInfo.date || new Date().toISOString(),
           summary: commitInfo.summary || ''
         });
@@ -371,6 +379,14 @@ export class GitService {
           const commitInfo = commitCache.get(currentCommitHash);
           if (commitInfo) {
             commitInfo.author = author;
+          }
+        }
+      } else if (line.startsWith('author-mail ')) {
+        const authorMail = line.substring(12).replace(/^<|>$/g, '');
+        if (currentCommitHash) {
+          const commitInfo = commitCache.get(currentCommitHash);
+          if (commitInfo) {
+            commitInfo.authorEmail = authorMail;
           }
         }
       } else if (line.startsWith('author-time ')) {
