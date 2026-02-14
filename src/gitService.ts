@@ -271,6 +271,45 @@ export class GitService {
     this.cache.invalidate(filePath);
   }
 
+  async getGitHubRemoteUrl(filePath?: string): Promise<string | null> {
+    try {
+      let git: SimpleGit;
+      if (filePath) {
+        const repo = this.getRepoForFile(filePath);
+        if (!repo) return null;
+        git = repo.git;
+      } else {
+        git = this.mainGit;
+      }
+      
+      const remotes = await git.getRemotes(true);
+      const origin = remotes.find(r => r.name === 'origin');
+      
+      if (!origin) {
+        return null;
+      }
+      
+      // Parse GitHub URL
+      const url = origin.refs.fetch || origin.refs.push;
+      if (!url) {
+        return null;
+      }
+      
+      // Handle different GitHub URL formats
+      // https://github.com/owner/repo.git
+      // git@github.com:owner/repo.git
+      let match = url.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
+      if (match) {
+        return `https://github.com/${match[1]}/${match[2]}`;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error getting GitHub remote:', error);
+      return null;
+    }
+  }
+
   async getBlame(filePath: string): Promise<BlameLineInfo[]> {
     await this.initializationPromise;
     

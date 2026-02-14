@@ -159,6 +159,16 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
 
+    vscode.commands.registerCommand('gitHistory.copyCommitShaFromBlame', async (commitHash: string) => {
+      if (!commitHash) {
+        return;
+      }
+      
+      // Copy to clipboard
+      await vscode.env.clipboard.writeText(commitHash);
+      vscode.window.showInformationMessage(`Copied commit SHA: ${commitHash.substring(0, 7)}`);
+    }),
+
   );
 }
 

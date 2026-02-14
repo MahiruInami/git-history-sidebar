@@ -85,6 +85,10 @@
       {
         "command": "gitHistory.viewBlameCommit",
         "title": "View Commit Files from Blame"
+      },
+      {
+        "command": "gitHistory.copyCommitShaFromBlame",
+        "title": "Copy Commit SHA from Blame"
       }
     ],
     "configuration": {

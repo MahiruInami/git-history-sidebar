@@ -136,6 +136,9 @@ export class GitBlameProvider {
         return;
       }
 
+      // Get GitHub URL if available
+      const githubUrl = await this.gitService.getGitHubRemoteUrl(filePath);
+
       // Clear existing decorations first
       editor.setDecorations(this.textDecorationType, []);
       editor.setDecorations(this.hoverDecorationType, []);
@@ -163,6 +166,14 @@ export class GitBlameProvider {
         hoverMessage.appendMarkdown(`${lineInfo.summary}  \n`);
         hoverMessage.appendMarkdown(`\`\`\`\n${lineInfo.commitHash.substring(0, 7)}\n\`\`\`  \n\n`);
         hoverMessage.appendMarkdown(`[View Changed Files](command:gitHistory.viewBlameCommit?${encodeURIComponent(JSON.stringify([lineInfo.commitHash, filePath]))})`);
+        hoverMessage.appendMarkdown(` | [Copy SHA](command:gitHistory.copyCommitShaFromBlame?${encodeURIComponent(JSON.stringify([lineInfo.commitHash]))})`);
+        
+        // Add GitHub link if available
+        if (githubUrl) {
+          const commitUrl = `${githubUrl}/commit/${lineInfo.commitHash}`;
+          hoverMessage.appendMarkdown(`  \n[View on GitHub](${commitUrl})`);
+        }
+        
         hoverMessage.isTrusted = true;
 
         const range = line.range;
@@ -206,21 +217,10 @@ export class GitBlameProvider {
 
   private formatRelativeTime(dateStr: string): string {
     const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffSecs = Math.floor(diffMs / 1000);
-    const diffMins = Math.floor(diffSecs / 60);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-    const diffMonths = Math.floor(diffDays / 30);
-    const diffYears = Math.floor(diffDays / 365);
-
-    if (diffSecs < 60) { return 'now'; }
-    if (diffMins < 60) { return `${diffMins}m`; }
-    if (diffHours < 24) { return `${diffHours}h`; }
-    if (diffDays < 30) { return `${diffDays}d`; }
-    if (diffMonths < 12) { return `${diffMonths}mo`; }
-    return `${diffYears}y`;
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   }
 
   dispose(): void {
