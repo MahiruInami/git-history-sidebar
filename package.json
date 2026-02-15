@@ -2,7 +2,7 @@
   "name": "git-history-sidebar",
   "displayName": "Git History Sidebar",
   "description": "View git history for current file in sidebar",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "engines": {
     "vscode": "^1.105.0"
   },
@@ -104,6 +104,21 @@
           "type": "string",
           "default": "Menlo, Monaco, 'Courier New', monospace",
           "description": "Font family for blame annotations"
+        },
+        "gitHistory.blameBackgroundEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable age-based background color for blame annotations (green=newest, red=oldest)"
+        },
+        "gitHistory.blameNewestColor": {
+          "type": "string",
+          "default": "#1a3d1a",
+          "description": "Background color for newest commits (green)"
+        },
+        "gitHistory.blameOldestColor": {
+          "type": "string",
+          "default": "#3d1a1a",
+          "description": "Background color for oldest commits (dark red)"
         }
       }
     },

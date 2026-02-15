@@ -364,7 +364,7 @@ export class GitService {
           commitCache.set(currentCommitHash, commitInfo);
         }
         
-        // Push the line with current commit info
+        // Push the line with current commit info (may be incomplete if author not yet parsed)
         blameInfo.push({
           lineNumber: lineNumber,
           commitHash: currentCommitHash,
@@ -404,6 +404,25 @@ export class GitService {
           if (commitInfo) {
             commitInfo.summary = summary;
           }
+        }
+      }
+    }
+
+    // Second pass: update blameInfo entries with complete commit info
+    for (const info of blameInfo) {
+      const commitInfo = commitCache.get(info.commitHash);
+      if (commitInfo) {
+        if (commitInfo.author) {
+          info.author = commitInfo.author;
+        }
+        if (commitInfo.authorEmail) {
+          info.authorEmail = commitInfo.authorEmail;
+        }
+        if (commitInfo.date) {
+          info.date = commitInfo.date;
+        }
+        if (commitInfo.summary) {
+          info.summary = commitInfo.summary;
         }
       }
     }

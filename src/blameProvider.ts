@@ -9,11 +9,17 @@ export class GitBlameProvider {
   private blameData: Map<string, BlameLineInfo[]> = new Map();
   private fontSize: number;
   private fontFamily: string;
+  private backgroundEnabled: boolean;
+  private newestColor: string;
+  private oldestColor: string;
 
   constructor(private gitService: GitService) {
     const config = vscode.workspace.getConfiguration('gitHistory');
     this.fontSize = config.get('blameFontSize', 12);
     this.fontFamily = config.get('blameFontFamily', 'Menlo, Monaco, \'Courier New\', monospace');
+    this.backgroundEnabled = config.get('blameBackgroundEnabled', false);
+    this.newestColor = config.get('blameNewestColor', '#1a3d1a');
+    this.oldestColor = config.get('blameOldestColor', '#3d1a1a');
 
     this.textDecorationType = this.createTextDecorationType();
 
@@ -28,7 +34,7 @@ export class GitBlameProvider {
       if (e.affectsConfiguration('gitHistory.showBlame')) {
         this.updateEnabledState();
       }
-      if (e.affectsConfiguration('gitHistory.blameFontSize') || e.affectsConfiguration('gitHistory.blameFontFamily')) {
+      if (e.affectsConfiguration('gitHistory.blameFontSize') || e.affectsConfiguration('gitHistory.blameFontFamily') || e.affectsConfiguration('gitHistory.blameBackgroundEnabled') || e.affectsConfiguration('gitHistory.blameNewestColor') || e.affectsConfiguration('gitHistory.blameOldestColor')) {
         this.updateFontSettings();
       }
     });
@@ -149,6 +155,18 @@ export class GitBlameProvider {
       const textDecorations: vscode.DecorationOptions[] = [];
       const hoverDecorations: vscode.DecorationOptions[] = [];
 
+      // Calculate unique commits for background coloring
+      const uniqueCommits: string[] = [];
+      if (this.backgroundEnabled) {
+        const seen = new Set<string>();
+        for (const lineInfo of blameInfo) {
+          if (!seen.has(lineInfo.commitHash)) {
+            seen.add(lineInfo.commitHash);
+            uniqueCommits.push(lineInfo.commitHash);
+          }
+        }
+      }
+
       // Fixed widths for consistent alignment
       const dateWidth = 10; // DD/MM/YYYY
       const authorWidth = 12;
@@ -189,12 +207,21 @@ export class GitBlameProvider {
 
         const range = line.range;
 
+        // Calculate background color based on commit index (grouped by unique commits)
+        let backgroundColor: string | undefined;
+        if (this.backgroundEnabled && uniqueCommits.length > 1) {
+          const commitIndex = uniqueCommits.indexOf(lineInfo.commitHash);
+          const ratio = commitIndex / (uniqueCommits.length - 1);
+          backgroundColor = this.interpolateColor(this.newestColor, this.oldestColor, ratio);
+        }
+
         // Text decoration (visible, no hover)
         const textDecoration: vscode.DecorationOptions = {
           range: range,
           renderOptions: {
             before: {
-              contentText: text
+              contentText: text,
+              backgroundColor: backgroundColor
             }
           }
         };
@@ -269,6 +296,9 @@ export class GitBlameProvider {
     const config = vscode.workspace.getConfiguration('gitHistory');
     this.fontSize = config.get('blameFontSize', 12);
     this.fontFamily = config.get('blameFontFamily', 'Menlo, Monaco, \'Courier New\', monospace');
+    this.backgroundEnabled = config.get('blameBackgroundEnabled', false);
+    this.newestColor = config.get('blameNewestColor', '#1a3d1a');
+    this.oldestColor = config.get('blameOldestColor', '#3d1a1a');
     
     this.textDecorationType.dispose();
     this.textDecorationType = this.createTextDecorationType();
@@ -276,5 +306,21 @@ export class GitBlameProvider {
     if (this.currentEditor && this.enabled) {
       this.showBlame(this.currentEditor);
     }
+  }
+
+  private interpolateColor(color1: string, color2: string, ratio: number): string {
+    const hex = (c: string) => parseInt(c, 16);
+    const r1 = hex(color1.slice(1, 3));
+    const g1 = hex(color1.slice(3, 5));
+    const b1 = hex(color1.slice(5, 7));
+    const r2 = hex(color2.slice(1, 3));
+    const g2 = hex(color2.slice(3, 5));
+    const b2 = hex(color2.slice(5, 7));
+    
+    const r = Math.round(r1 + (r2 - r1) * ratio);
+    const g = Math.round(g1 + (g2 - g1) * ratio);
+    const b = Math.round(b1 + (b2 - b1) * ratio);
+    
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
   }
 }
