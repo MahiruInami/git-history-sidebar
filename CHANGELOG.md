@@ -1,6 +1,17 @@
 # Change Log
 
-## \[0.0.4\] - 2026-02-14
+## [0.0.5] - 2026-02-15
+
+### Added
+
+- Age-based background color for blame annotations (green for newest commits, dark red for oldest)
+- Configuration options for blame background colors (`blameBackgroundEnabled`, `blameNewestColor`, `blameOldestColor`)
+
+### Fixed
+
+- Bug where author name showed as "Unknown" for the first line of each commit in blame view
+
+## [0.0.4] - 2026-02-14
 
 ### Added
 
